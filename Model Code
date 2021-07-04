@@ -1,0 +1,564 @@
+# -*- coding: utf-8 -*-
+
+
+# Reading different files to make sample 
+
+#import pandas as pd
+#import numpy as np
+#import nltk
+#
+
+
+#df_loan_q = pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/loan_query.csv")
+#df_loan_q['Flag'] = '1'
+#
+#df_loan_c = pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/loan_complaint.csv")
+#df_loan_c['Flag'] = '0'
+#
+#df_credit_q=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/credit_query.csv")
+#df_credit_q['Flag']='1'
+#
+#df_credit_c=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/credit_complaint.csv")
+#df_credit_c['Flag']='0'
+#
+#df_general_card_q=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/general_card_query.csv")
+#df_general_card_q['Flag']='1'
+#
+#df_general_card_c=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/general_card_complaint.csv")
+#df_general_card_c['Flag']='0'
+#
+#df_debt_q=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/debt_query.csv")
+#df_debt_q['Flag']='1'
+#
+#df_debt_c=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/debt_complaint.csv")
+#df_debt_c['Flag']='0'
+#
+#df_mortgage_q=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/mortgage_query.csv")
+#df_mortgage_q['Flag']='1'
+#
+#df_mortgage_c=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/mortgage_complaint.csv")
+#df_mortgage_c['Flag']='0'
+#
+#df_bank_account_services_q=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/bank_account&services_query.csv")
+#df_bank_account_services_q['Flag']='1'
+#
+#df_bank_account_services_c=pd.read_csv("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/data/bank_account&services_complaint.csv")
+#df_bank_account_services_c['Flag']='0'
+
+#
+#df_loan_q_sample = df_loan_q.sample(n=880)
+#df_loan_c_sample = df_loan_c.sample(n=120)
+#
+#df_credit_q_sample = df_credit_q.sample(n=776)
+#df_credit_c_sample = df_credit_c.sample(n=224)
+#
+#
+#df_debt_q_sample=df_debt_q.sample(n=820)
+#df_debt_c_sample=df_debt_c.sample(n=180)
+#
+#df_mortgage_q_sample=df_mortgage_q.sample(n=800)
+#df_mortgage_c_sample=df_mortgage_c.sample(n=200)
+#
+#df_bank_account_services_q_sample=df_bank_account_services_q.sample(n=709)
+#df_bank_account_services_c_sample=df_bank_account_services_c.sample(n=291)
+#
+#data_frame = pd.concat([df_loan_q_sample, df_loan_c_sample,df_credit_q_sample,df_credit_c_sample,df_debt_q_sample,df_debt_c_sample,df_mortgage_q_sample,df_mortgage_c_sample,df_bank_account_services_q_sample,df_bank_account_services_c_sample])
+#
+#data_frame.to_excel("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/Complaint_data.xlsx")
+
+
+
+# Reading Sample of 5000 rows
+
+
+import pandas as pd
+import numpy as np
+import nltk
+
+data_frame=pd.read_excel("C:/Users/1550523.GLOBE/Desktop/Complaints Datasets/Complaint_data.xlsx")
+data_frame.reset_index(inplace=True, drop=True)
+data_frame['Flag']=data_frame['Flag'].astype('category')
+
+data_frame.shape
+
+data_frame.columns
+len(data_frame)
+
+X1=data_frame['Consumer complaint narrative']
+y1=data_frame['Flag']
+
+
+# Preprossing of Data
+
+from nltk import word_tokenize
+from nltk.corpus import wordnet
+from nltk import pos_tag
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+import re
+
+
+def get_wordnet_pos(word):
+    
+    tag = nltk.pos_tag([word])[0][1][0].upper()
+    tag_dict= {"J": wordnet.ADJ,
+               "N": wordnet.NOUN,
+               "V": wordnet.VERB,
+               "R": wordnet.ADV}
+    
+    return tag_dict.get(tag, wordnet.NOUN)
+
+
+
+corpus= []
+
+for i in range(0,len(X1)):
+    review = re.sub(r'\W', ' ',str(X1[i]))
+    review=re.sub(".XX*"," ",review)
+    review = review.lower()
+    review = re.sub(r'\s+[a-z]\s+', ' ',review)
+    review = re.sub(r'\s+', ' ',review)
+
+    
+    review = nltk.word_tokenize(review)
+    lemmatizer = WordNetLemmatizer()
+    
+    review = [lemmatizer.lemmatize(word, get_wordnet_pos(word)) for word in review]
+    review = [lemmatizer.lemmatize(word, "v") for word in review]
+    review = [word for word in review if word not in stopwords.words('english')]
+    review = ' '.join(review)
+    
+    corpus.append(review)
+
+
+
+# TF-IDF Vectorizer
+    
+from sklearn.feature_extraction.text import TfidfVectorizer
+tfidf = TfidfVectorizer(min_df=0.02,max_df=0.8,ngram_range=(1,5),stop_words='english')
+feature=tfidf.fit_transform(corpus).toarray()
+labels=y1
+
+# Collect Importatnt Features 
+
+feature_names = np.array(tfidf.get_feature_names())
+f=(tfidf.get_feature_names())
+
+#np.savetxt("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\feature_name.csv",feature_names,fmt='%s')
+
+
+# Collect Top 50 Importatnt Features #####################
+
+tfidf_imp = TfidfVectorizer(min_df=0.02,max_df=0.8,ngram_range=(1,5),stop_words='english',max_features=50)
+
+feature_imp=tfidf_imp.fit_transform(corpus).toarray()
+feature_names_imp = np.array(tfidf_imp.get_feature_names())
+
+#np.savetxt("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\Imp_feature_name.csv",feature_names_imp,fmt='%s')
+    
+
+
+# Saving features with flag
+
+df_to_save= pd.DataFrame(feature,columns=feature_names)
+df_to_save=df_to_save.assign(Flag=labels)
+df_to_save.to_excel("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\processed_data.xlsx")
+
+
+# Reading Vector Dataset
+
+import pandas as pd
+import numpy as np
+
+
+data=pd.read_excel("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\final_data_x.xlsx")
+X = data.drop("Flag",axis=1)
+y = data["Flag"]
+
+
+# Training & Texting Data set 
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.30, random_state=100)
+
+print (X_train.shape,y_train.shape)
+print (X_test.shape,y_test.shape)
+
+X_train.to_excel("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\data_xtrain.xlsx")
+
+# Logestic Model without vif
+
+from sklearn.linear_model import LogisticRegression
+logreg= LogisticRegression()
+logreg.fit(X_train,y_train)
+logreg_predictions = logreg.predict(X_test)
+
+#### accuracy 
+accuracy = logreg.score(X_test,y_test)
+accuracy
+
+#### Confusion Matrix
+from sklearn.metrics import confusion_matrix
+cm =confusion_matrix(y_test,logreg_predictions)
+cm
+#### 
+
+logreg_prob = logreg.predict_proba(X_test)[:,1]
+logreg_prob
+
+
+######## Confusion Matrix With All features
+
+from sklearn import metrics
+from sklearn.metrics import classification_report,confusion_matrix,accuracy_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def get_score(predictions,labels,scores):
+    print('Classification report: \n',metrics.classification_report(labels,predictions))
+    fpr,tpr,_ = metrics.roc_curve(labels,scores)
+    plt.title('ROC \nAUC:{0:.3f}'.format(metrics.auc(fpr,tpr)))
+    plt.xlabel('FPR (Precision)')
+    plt.ylabel('TPR (Recall)')
+    plt.plot(fpr,tpr)
+    plt.plot((0,1),ls='dashed',color='black')
+    plt.rcParams.update({'font.size':15})
+    plt.show()
+    
+    # confusion matrix
+    cm = confusion_matrix(labels,predictions)
+    cm_df=pd.DataFrame(cm)
+    specificity1=cm[0,0]/(cm[0,1]+cm[0,0])
+    print('Specificity:',specificity1)
+    print('Sensitivity/Recall:',metrics.recall_score(labels,predictions))
+    print('Precision:',metrics.precision_score(labels,predictions))
+    
+    plt.figure(figsize=(5.5,4))
+    sns.heatmap(cm_df,annot=True,fmt="d",cmap="Blues")
+    plt.title('Confusion Matrix \n Accuracy:{0:.3f}'.format(accuracy_score(labels,predictions)))
+    plt.xlabel('Predicted label')
+    plt.ylabel('True label')
+    plt.show()
+    
+get_score(logreg_predictions,y_test,logreg_prob)   
+
+
+# Auto KS Statistic calculation
+
+from scipy import stats
+import scipy
+print (scipy.stats.describe(logreg_prob))
+med=np.median(logreg_prob)
+
+stats.kstest(logreg_prob,'norm')
+
+
+# Mannual KS Statistic calculation
+
+data = pd.DataFrame()
+data['values']=logreg_prob
+data['complaints']=y_test.values
+data['queries']=1-data.complaints
+
+
+####### Define 10 Buckets
+
+data['bucket'] = pd.qcut(data['values'],10,duplicates='drop')
+
+
+######## Group the data frame by buckets3
+
+grouped = data.groupby('bucket',as_index= True)
+
+###### Create Summary Data Frame
+
+agg1 = pd.DataFrame()
+agg1['min_scr']=[item[0] for item in grouped.min().values ]
+agg1['max_scr']=[item[0] for item in grouped.max().values ]
+agg1['bads_queries']=grouped.sum().queries.values 
+agg1['goods_complaints']=grouped.sum().complaints.values 
+agg1['total']=agg1.bads_queries + agg1.goods_complaints
+print (agg1)
+
+
+####### Sort the data frame by score
+
+agg2 = (agg1.sort_index(by='min_scr')).reset_index(drop=True)
+agg2['odds'] = (agg1.goods_complaints / agg2.bads_queries).apply('{0:.2f}'.format)
+agg2['bad_rate'] = (agg1.bads_queries / agg1.total).apply('{0:.2%}'.format)
+agg2['good_rate'] = (agg1.goods_complaints / agg1.total).apply('{0:.2%}'.format)
+agg2['ks']=np.round(((agg1.bads_queries/data.queries.sum()).cumsum() - (agg1.goods_complaints/data.complaints.sum()).cumsum()),4)*100
+print (agg2)
+
+######## Define a function to flag max ks
+
+flag = lambda x: '<----' if x == agg2.ks.max() else ''
+agg2['max_ks'] = agg2.ks.apply(flag)
+agg2
+
+
+
+
+# Descriptive Statices
+
+
+from sklearn.preprocessing import binarize
+
+logreg_predictions_new = logreg_prob.reshape(-1,1)
+y_pred_class = binarize(logreg_predictions_new,0.770566)
+
+cm_binarize =confusion_matrix(y_test,y_pred_class)
+
+
+
+
+######## Confusion Matrix With All features
+
+from sklearn import metrics
+from sklearn.metrics import classification_report,confusion_matrix,accuracy_score
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def get_score(predictions,labels,scores):
+    print('Classification report: \n',metrics.classification_report(labels,predictions))
+    fpr,tpr,_ = metrics.roc_curve(labels,scores)
+    plt.title('ROC \nAUC:{0:.3f}'.format(metrics.auc(fpr,tpr)))
+    plt.xlabel('FPR (Precision)')
+    plt.ylabel('TPR (Recall)')
+    plt.plot(fpr,tpr)
+    plt.plot((0,1),ls='dashed',color='black')
+    plt.rcParams.update({'font.size':15})
+    plt.show()
+    
+    # confusion matrix
+    cm = confusion_matrix(labels,predictions)
+    cm_df=pd.DataFrame(cm)
+    specificity1=cm[0,0]/(cm[0,1]+cm[0,0])
+    print('Specificity:',specificity1)
+    print('Sensitivity/Recall:',metrics.recall_score(labels,predictions))
+    print('Precision:',metrics.precision_score(labels,predictions))
+    
+    plt.figure(figsize=(5.5,4))
+    sns.heatmap(cm_df,annot=True,fmt="d",cmap="Blues")
+    plt.title('Confusion Matrix \n Accuracy:{0:.3f}'.format(accuracy_score(labels,predictions)))
+    plt.xlabel('Predicted label')
+    plt.ylabel('True label')
+    plt.show()
+    
+get_score(y_pred_class,y_test,logreg_prob)   
+
+
+
+# Auto KS Statistic calculation
+
+from scipy import stats
+import scipy
+print (scipy.stats.describe(logreg_prob))
+med=np.median(logreg_prob)
+
+stats.kstest(logreg_prob,'norm')
+
+
+# Mannual KS Statistic calculation
+
+data = pd.DataFrame()
+data['values']=logreg_prob
+data['complaints']=y_test.values
+data['queries']=1-data.complaints
+
+
+####### Define 10 Buckets
+
+data['bucket'] = pd.qcut(data['values'],10,duplicates='drop')
+
+
+######## Group the data frame by buckets3
+
+grouped = data.groupby('bucket',as_index= True)
+
+###### Create Summary Data Frame
+
+agg1 = pd.DataFrame()
+agg1['min_scr']=[item[0] for item in grouped.min().values ]
+agg1['max_scr']=[item[0] for item in grouped.max().values ]
+agg1['bads_queries']=grouped.sum().queries.values 
+agg1['goods_complaints']=grouped.sum().complaints.values 
+agg1['total']=agg1.bads_queries + agg1.goods_complaints
+print (agg1)
+
+
+####### Sort the data frame by score
+
+agg2 = (agg1.sort_index(by='min_scr')).reset_index(drop=True)
+agg2['odds'] = (agg1.goods_complaints / agg2.bads_queries).apply('{0:.2f}'.format)
+agg2['bad_rate'] = (agg1.bads_queries / agg1.total).apply('{0:.2%}'.format)
+agg2['good_rate'] = (agg1.goods_complaints / agg1.total).apply('{0:.2%}'.format)
+agg2['ks']=np.round(((agg1.bads_queries/data.queries.sum()).cumsum() - (agg1.goods_complaints/data.complaints.sum()).cumsum()),4)*100
+print (agg2)
+
+######## Define a function to flag max ks
+
+flag = lambda x: '<----' if x == agg2.ks.max() else ''
+agg2['max_ks'] = agg2.ks.apply(flag)
+agg2
+
+
+# VIF 
+
+from statsmodels.tools.tools import add_constant
+X_train =add_constant(X_train)
+
+from sklearn.base import BaseEstimator,TransformerMixin
+from sklearn.preprocessing import Imputer
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+
+class ReduceVIF(BaseEstimator,TransformerMixin):
+    def __init__(self,thresh=2.5,impute=True,impute_strategy='median'):
+        self.thresh=thresh
+        
+        if impute:
+            self.imputer = Imputer(strategy=impute_strategy)
+    def fit(self,X,y = None):
+        print('ReduceVIF fit')
+        if hasattr(self,'imputer'):
+            self.imputer.fit(X)
+        return self
+    
+    def transform(self,X,y=None):
+        print ('ReduceVIF transform')
+        columns=X.columns.tolist()
+        if hasattr(self,'imputer'):
+            X =pd.DataFrame(self.imputer.transform(X),columns=columns)
+        return ReduceVIF.calculate_vif(X,self.thresh)
+    @staticmethod
+    def calculate_vif(X_train,thresh=2.5):
+        
+        dropped =True
+        while dropped:
+            variables=X_train.columns
+            dropped =False
+            vif = [variance_inflation_factor(X_train[variables].values,X_train.columns.get_loc(var)) for var in X_train.columns ]
+            z=pd.DataFrame()
+            z['vif_score']=vif
+            z['features']=X_train.columns
+            print(z)
+            
+            max_vif = max(vif)
+            
+            if max_vif > thresh:
+                maxloc = vif.index(max_vif)
+                print('Dropping',X.columns[maxloc],'with vif="',max_vif,'"')
+                X_train = X_train.drop([X_train.columns.tolist()[maxloc]],axis=1)
+                dropped=True
+        print(vif)
+        return X_train
+
+transformer = ReduceVIF()
+X_train_original=X_train.copy()
+X_train = transformer.fit_transform(X_train,y_train)
+
+X_train =pd
+#
+#X_train.to_csv("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\X_train.csv")
+
+X_train.to_excel("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\X_train.xlsx")
+#
+#            
+Correlation_matrix = X_train.corr()
+Correlation_mat = pd.DataFrame(Correlation_matrix)
+
+Correlation_mat.to_csv("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\Correlation_matrix_vif.csv")
+
+
+
+##### Logestic Regression after
+
+X_train=pd.read_csv("C:\\Users\\1550523.GLOBE\\Desktop\\Complaints Datasets\\X_train.csv")
+X_train.columns
+X_train.reindex()
+
+
+X_test_new = X_test[X_train.columns] 
+
+from sklearn.linear_model import LogisticRegression
+logreg_vif= LogisticRegression()
+logreg_vif.fit(X_train,y_train)
+
+logreg_predictions_vif = logreg_vif.predict(X_test_new)
+
+accuracy = logreg_vif.score(X_test_new,y_test)
+accuracy
+
+from sklearn.metrics import confusion_matrix
+cm =confusion_matrix(y_test,logreg_predictions_vif)
+
+
+
+logreg_prob_vif = logreg_vif.predict_proba(X_test_new)[:,1]
+logreg_prob_vif
+
+
+
+
+from scipy import stats
+import scipy
+print (scipy.stats.describe(logreg_prob_vif))
+med=np.median(logreg_prob_vif)
+
+stats.kstest(logreg_prob_vif,'norm')
+
+
+#############
+
+data = pd.DataFrame()
+data['values']=logreg_prob_vif
+data['complaints']=y_test.values
+data['queries']=1-data.complaints
+
+
+## Define 10 Buckets
+
+data['bucket'] = pd.qcut(data['values'],10,duplicates='drop')
+
+
+## Group the data frame by buckets3
+
+grouped = data.groupby('bucket',as_index= True)
+
+## Create Summary Data Frame
+agg1 = pd.DataFrame()
+agg1['min_scr']=[item[0] for item in grouped.min().values ]
+agg1['max_scr']=[item[0] for item in grouped.max().values ]
+agg1['bads_queries']=grouped.sum().queries.values 
+agg1['goods_complaints']=grouped.sum().complaints.values 
+agg1['total']=agg1.bads_queries + agg1.goods_complaints
+print (agg1)
+
+
+## Sort the data frame by score
+
+agg2 = (agg1.sort_index(by='min_scr')).reset_index(drop=True)
+agg2['odds'] = (agg1.goods_complaints / agg2.bads_queries).apply('{0:.2f}'.format)
+agg2['bad_rate'] = (agg1.bads_queries / agg1.total).apply('{0:.2%}'.format)
+agg2['good_rate'] = (agg1.goods_complaints / agg1.total).apply('{0:.2%}'.format)
+agg2['ks']=np.round(((agg1.bads_queries/data.queries.sum()).cumsum() - (agg1.goods_complaints/data.complaints.sum()).cumsum()),4)*100
+print (agg2)  
+            
+
+
+## Define a function to flag max ks
+
+flag = lambda x: '<----' if x == agg2.ks.max() else ''
+agg2['max_ks'] = agg2.ks.apply(flag)
+agg2        
+            
+
+
+
+from sklearn.preprocessing import binarize
+
+logreg_predictions_vif = logreg_prob_vif.reshape(-1,1)
+y_pred_class = binarize(logreg_predictions_vif, 0.7328216 )
+
+cm_binarize =confusion_matrix(y_test,y_pred_class)
+
